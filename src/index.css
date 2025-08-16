@@ -2,41 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Professional PDF Converter Design System
+All colors MUST be HSL. Modern blue/purple theme with gradients and animations.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 220 20% 98%;
+    --foreground: 220 15% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 15% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 240 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 245 100% 75%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 15% 96%;
+    --secondary-foreground: 220 15% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 10% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 260 80% 65%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 220 15% 90%;
+    --input: 220 15% 95%;
+    --ring: 240 90% 60%;
 
-    --radius: 0.5rem;
+    --success: 140 70% 50%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 90% 60%;
+    --warning-foreground: 0 0% 100%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradients for PDF converter */
+    --gradient-primary: linear-gradient(135deg, hsl(240 90% 60%), hsl(260 80% 65%));
+    --gradient-secondary: linear-gradient(135deg, hsl(220 15% 98%), hsl(220 15% 96%));
+    --gradient-accent: linear-gradient(135deg, hsl(245 100% 75%), hsl(260 80% 65%));
+    
+    /* Shadows with primary color glow */
+    --shadow-primary: 0 10px 30px -10px hsl(240 90% 60% / 0.3);
+    --shadow-card: 0 4px 20px -4px hsl(220 15% 15% / 0.1);
+    --shadow-glow: 0 0 40px hsl(245 100% 75% / 0.4);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
 
@@ -56,33 +77,50 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 220 25% 8%;
+    --foreground: 220 15% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 20% 12%;
+    --card-foreground: 220 15% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 20% 12%;
+    --popover-foreground: 220 15% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 245 100% 75%;
+    --primary-foreground: 220 25% 8%;
+    --primary-glow: 250 100% 80%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 20% 16%;
+    --secondary-foreground: 220 15% 85%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 10% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 260 80% 70%;
+    --accent-foreground: 220 25% 8%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 65%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 220 20% 20%;
+    --input: 220 20% 16%;
+    --ring: 245 100% 75%;
+
+    --success: 140 70% 55%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 90% 65%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(245 100% 75%), hsl(260 80% 70%));
+    --gradient-secondary: linear-gradient(135deg, hsl(220 20% 12%), hsl(220 20% 16%));
+    --gradient-accent: linear-gradient(135deg, hsl(250 100% 80%), hsl(260 80% 70%));
+    
+    /* Dark mode shadows */
+    --shadow-primary: 0 10px 30px -10px hsl(245 100% 75% / 0.3);
+    --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 40px hsl(250 100% 80% / 0.4);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -101,5 +139,65 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom utility classes */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .shadow-primary {
+    box-shadow: var(--shadow-primary);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+
+  /* File upload drag state */
+  .drag-over {
+    @apply border-primary bg-primary/5 scale-[1.02];
+  }
+
+  /* Progress bar animation */
+  .progress-fill {
+    transition: width 0.3s ease-in-out;
+  }
+
+  /* Pulse animation for processing state */
+  .pulse-glow {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: var(--shadow-primary);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: var(--shadow-glow);
+    }
   }
 }
