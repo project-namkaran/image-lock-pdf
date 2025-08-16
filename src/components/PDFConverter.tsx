@@ -8,8 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import * as pdfjsLib from 'pdfjs-dist';
 import { jsPDF } from 'jspdf';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker with fallback
+try {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+} catch {
+  // Fallback to no worker if CDN fails
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+}
 
 interface ConversionState {
   file: File | null;
@@ -17,6 +22,8 @@ interface ConversionState {
   progress: number;
   status: 'idle' | 'processing' | 'completed' | 'error';
   quality: 'high' | 'medium' | 'low';
+  errorMessage: string;
+  currentStep: string;
 }
 
 export const PDFConverter: React.FC = () => {
@@ -25,7 +32,9 @@ export const PDFConverter: React.FC = () => {
     pages: [],
     progress: 0,
     status: 'idle',
-    quality: 'high'
+    quality: 'high',
+    errorMessage: '',
+    currentStep: ''
   });
 
   const qualitySettings = {
@@ -42,7 +51,15 @@ export const PDFConverter: React.FC = () => {
     const pdfFile = files.find(file => file.type === 'application/pdf');
     
     if (pdfFile) {
-      setState(prev => ({ ...prev, file: pdfFile, status: 'idle', pages: [], progress: 0 }));
+      setState(prev => ({ 
+        ...prev, 
+        file: pdfFile, 
+        status: 'idle', 
+        pages: [], 
+        progress: 0, 
+        errorMessage: '',
+        currentStep: ''
+      }));
       toast.success(`PDF "${pdfFile.name}" loaded successfully!`);
     } else {
       toast.error('Please upload a PDF file');
@@ -62,7 +79,15 @@ export const PDFConverter: React.FC = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type === 'application/pdf') {
-      setState(prev => ({ ...prev, file, status: 'idle', pages: [], progress: 0 }));
+      setState(prev => ({ 
+        ...prev, 
+        file, 
+        status: 'idle', 
+        pages: [], 
+        progress: 0, 
+        errorMessage: '',
+        currentStep: ''
+      }));
       toast.success(`PDF "${file.name}" loaded successfully!`);
     } else {
       toast.error('Please select a PDF file');
@@ -72,47 +97,87 @@ export const PDFConverter: React.FC = () => {
   const convertPDFToImages = async () => {
     if (!state.file) return;
 
-    setState(prev => ({ ...prev, status: 'processing', progress: 0, pages: [] }));
+    setState(prev => ({ 
+      ...prev, 
+      status: 'processing', 
+      progress: 0, 
+      pages: [], 
+      errorMessage: '',
+      currentStep: 'Loading PDF...'
+    }));
     toast.info('Starting PDF conversion...');
 
     try {
+      setState(prev => ({ ...prev, currentStep: 'Reading PDF file...' }));
       const arrayBuffer = await state.file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      
+      setState(prev => ({ ...prev, currentStep: 'Initializing PDF parser...' }));
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        cMapUrl: 'https://unpkg.com/pdfjs-dist@' + pdfjsLib.version + '/cmaps/',
+        cMapPacked: true
+      });
+      
+      const pdf = await loadingTask.promise;
       const totalPages = pdf.numPages;
       const images: string[] = [];
       const settings = qualitySettings[state.quality];
 
+      setState(prev => ({ ...prev, currentStep: `Converting ${totalPages} pages to images...` }));
+
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        setState(prev => ({ ...prev, currentStep: `Converting page ${pageNum} of ${totalPages}...` }));
+        
         const page = await pdf.getPage(pageNum);
         const viewport = page.getViewport({ scale: settings.scale });
         
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
+        
+        if (!context) {
+          throw new Error('Failed to get canvas context');
+        }
+        
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        if (context) {
-          const renderContext = {
-            canvasContext: context,
-            viewport: viewport,
-            canvas: canvas
-          };
-          
-          await page.render(renderContext).promise;
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+          canvas: canvas
+        };
+        
+        await page.render(renderContext).promise;
 
-          const imageData = canvas.toDataURL(settings.format, settings.quality);
-          images.push(imageData);
-          
-          const progress = (pageNum / totalPages) * 100;
-          setState(prev => ({ ...prev, progress, pages: [...images] }));
-        }
+        const imageData = canvas.toDataURL(settings.format, settings.quality);
+        images.push(imageData);
+        
+        const progress = (pageNum / totalPages) * 100;
+        setState(prev => ({ ...prev, progress, pages: [...images] }));
+        
+        // Small delay to allow UI updates
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
 
-      setState(prev => ({ ...prev, status: 'completed', pages: images }));
+      setState(prev => ({ 
+        ...prev, 
+        status: 'completed', 
+        pages: images, 
+        currentStep: 'Conversion complete!'
+      }));
       toast.success(`Successfully converted ${totalPages} pages to images!`);
     } catch (error) {
       console.error('Conversion error:', error);
-      setState(prev => ({ ...prev, status: 'error' }));
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Unknown error occurred during conversion';
+      
+      setState(prev => ({ 
+        ...prev, 
+        status: 'error',
+        errorMessage,
+        currentStep: ''
+      }));
       toast.error('Failed to convert PDF. Please try again.');
     }
   };
@@ -135,29 +200,35 @@ export const PDFConverter: React.FC = () => {
         const img = new Image();
         img.src = imgData;
         
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
           img.onload = () => {
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            
-            const imgAspectRatio = img.width / img.height;
-            const pdfAspectRatio = pdfWidth / pdfHeight;
-            
-            let width, height;
-            if (imgAspectRatio > pdfAspectRatio) {
-              width = pdfWidth;
-              height = pdfWidth / imgAspectRatio;
-            } else {
-              height = pdfHeight;
-              width = pdfHeight * imgAspectRatio;
+            try {
+              const pdfWidth = pdf.internal.pageSize.getWidth();
+              const pdfHeight = pdf.internal.pageSize.getHeight();
+              
+              const imgAspectRatio = img.width / img.height;
+              const pdfAspectRatio = pdfWidth / pdfHeight;
+              
+              let width, height;
+              if (imgAspectRatio > pdfAspectRatio) {
+                width = pdfWidth;
+                height = pdfWidth / imgAspectRatio;
+              } else {
+                height = pdfHeight;
+                width = pdfHeight * imgAspectRatio;
+              }
+              
+              const x = (pdfWidth - width) / 2;
+              const y = (pdfHeight - height) / 2;
+              
+              pdf.addImage(imgData, 'JPEG', x, y, width, height);
+              resolve(null);
+            } catch (err) {
+              reject(err);
             }
-            
-            const x = (pdfWidth - width) / 2;
-            const y = (pdfHeight - height) / 2;
-            
-            pdf.addImage(imgData, 'JPEG', x, y, width, height);
-            resolve(null);
           };
+          
+          img.onerror = () => reject(new Error('Failed to load image'));
         });
       }
 
@@ -168,6 +239,19 @@ export const PDFConverter: React.FC = () => {
       console.error('PDF generation error:', error);
       toast.error('Failed to generate PDF. Please try again.');
     }
+  };
+
+  const resetConverter = () => {
+    setState({
+      file: null,
+      pages: [],
+      progress: 0,
+      status: 'idle',
+      quality: 'high',
+      errorMessage: '',
+      currentStep: ''
+    });
+    toast.info('Converter reset. You can upload a new PDF.');
   };
 
   return (
@@ -267,15 +351,50 @@ export const PDFConverter: React.FC = () => {
         <Card className="p-6 shadow-card">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="font-medium">Converting pages...</span>
+              <span className="font-medium">{state.currentStep}</span>
               <span className="text-sm text-muted-foreground">
                 {Math.round(state.progress)}% complete
               </span>
             </div>
             <Progress value={state.progress} className="h-2" />
             <p className="text-sm text-muted-foreground text-center">
-              Processing page {Math.ceil(state.progress / 100 * (state.pages.length + 1))} of your PDF
+              {state.pages.length > 0 && `Converted ${state.pages.length} pages so far`}
             </p>
+          </div>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {state.status === 'error' && (
+        <Card className="p-6 shadow-card border-destructive">
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center gap-2 text-destructive">
+              <div className="h-2 w-2 bg-destructive rounded-full"></div>
+              <span className="font-semibold">Conversion Failed</span>
+            </div>
+            
+            <p className="text-muted-foreground">
+              {state.errorMessage || 'An error occurred during PDF conversion'}
+            </p>
+            
+            <div className="flex gap-3 justify-center">
+              <EnhancedButton
+                variant="outline"
+                size="lg"
+                onClick={convertPDFToImages}
+                className="transition-bounce"
+              >
+                Try Again
+              </EnhancedButton>
+              <EnhancedButton
+                variant="secondary"
+                size="lg"
+                onClick={resetConverter}
+                className="transition-bounce"
+              >
+                Start Over
+              </EnhancedButton>
+            </div>
           </div>
         </Card>
       )}
